@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<!-- This is based on DillingerLee's great template here:
+https://github.com/Team-Code/KA_Offline -->
+<html>
+ <head>
+    <title>Memory Game</title>
+    <style>
+         #mycanvas{
+               position: absolute;
+               top: 40px;
+               left: 60px;
+         }
+         body{
+               background-color: rgb(0,213,255);
+         }
+    </style>
+</head>
+ <body>
+    <p align="center">
+	<!--This draws the Canvas on the webpage -->
+      <canvas id="mycanvas"></canvas>
+    </p>
+ </body>
+
+ <!-- Run all the JavaScript stuff -->
+ <!-- Include the processing.js library -->
+ <!-- See https://khanacademy.zendesk.com/hc/en-us/articles/202260404-What-parts-of-ProcessingJS-does-Khan-Academy-support- for differences -->
+ <script src="https://cdn.jsdelivr.net/processing.js/1.4.8/processing.min.js"></script>
+
+ <script>
+    var sketchProc = function(processingInstance) {
+     with (processingInstance) {
+        size(400, 400);
+        frameRate(30);
+
+        // ProgramCodeGoesHere
+        var shape = function(radius, r,g,b){
+               this.radius =  radius;
+               this.r =  r;
+               this.g = g;
+               this.b = b;
+        };
+        var e0 = new shape(45, 240,19,229);//light pink
+        var e1 = new shape(45, 0,139,19);// dark green
+        var e2 = new shape(45, 37,19,240);//blue
+        var e3 = new shape(45, 255,0,0 );//red
+        var e4 = new shape(45, 255,255,0 );//yellow
+        var e5 = new shape(45, 0,255,255 );//cyan
+        var e6 = new shape(45, 217,213,213);//off-white
+        var e7 = new shape(45, 19,240,74 );//light green
+        var e8 = new shape(45, 121,11,189);//purple
+        var e9 = new shape(45, 240,137,19);//orange
+        var e10 = new shape(45,0,0,0 );//black
+        var e11 = new shape(45,75,75,75 );//grey
+        var faces = [e0,e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11];
+        var selected = [];
+        for(var i = 0; i < 10; ++i){
+            var index = floor(random(faces.length));
+            var face = faces[index];
+            selected.push(face);
+            selected.push(face);
+            faces.splice(index,1);
+        }
+        var shuffleArray = function(array){
+           var length = array.length;
+           while(length > 0){
+             var index = floor(random(length));
+              --length;
+              var tmp = array[index];
+              array[index] = array[length];
+              array[length] = tmp;
+
+          }
+        }
+        shuffleArray(selected);
+        var Tile = function(x, y,face){
+             this.x = x;
+             this.y = y;
+             this.width = 60;
+             this.height = 60;
+             this.face = face;
+             this.isUp = false;
+        };
+        Tile.prototype.draw = function(r,g,b){
+            fill(r,g,b);
+            rect(this.x, this.y, this.width, this.height, 10);
+
+            if(this.isUp){
+               fill(255,255,255);
+               rect(this.x, this.y, this.width, this.height, 10);
+               fill(this.face.r,this.face.g, this.face.b);
+               ellipse(this.x + this.width/2, this.y+ this.height/2, this.face.radius,this.face.radius);
+            }
+
+        }
+        var tiles = [];
+        var col = 5;
+        var row = 4;
+        for(var i = 0; i < col; ++i){
+             for(var j = 0; j < row; ++j){
+                    var tile_x = i*70 + 30;
+                    var tile_y = j*70 + 90;
+                    var tile_face = selected.pop();
+                    var tile = new Tile(tile_x,tile_y,tile_face);
+                    tiles.push(tile);
+
+             }
+        }
+        var checkMouseInside = function(x,y,width,height){
+            return (mouseX >= x && mouseX <= x + width
+                     && mouseY >= y && mouseY <= y + height);
+        }
+
+        var num = 0;
+        var delayStartFC = null;
+
+        var prev_ind;
+        var opened = [];
+        var numtries=0;
+        var score=0;
+        mouseClicked = function(){
+           for(var i = 0; i < tiles.length; ++i){
+             if(checkMouseInside(tiles[i].x, tiles[i].y, tiles[i].width, tiles[i].height)){
+
+               if(num < 2 && !tiles[i].isUp){
+                  tiles[i].isUp = true;
+                  if(num === 0){
+                        prev_ind = i;
+                  }
+                  else{
+                     numtries++;
+                     if(tiles[prev_ind].face === tiles[i].face){
+                           tiles[prev_ind].isUp = true;
+                           tiles[i].isUp = true;
+                           opened.push(i);
+                           opened.push(prev_ind);
+                           score += floor(10*(10/numtries));
+                           if(opened.length <= tiles.length/4){
+                              numtries=0;
+                           }
+                     }
+                  }
+                  num++;
+
+               }
+               if(num === 2){
+                  delayStartFC = frameCount;
+               }
+               loop();
+
+             }
+          }
+
+        }
+        draw = function(){
+         if(delayStartFC && (frameCount - delayStartFC) > 20){
+             for(var i = 0; i < tiles.length; ++i){
+                  tiles[i].isUp = false;
+             }
+             num = 0;
+             delayStartFC = null;
+             noLoop();
+          }
+
+          for(var j =0; j < opened.length; ++j){
+              var temp = opened[j];
+              tiles[temp].isUp = true;
+          }
+          background(50,50,50);
+           for(var i =0; i < tiles.length; ++i){
+               tiles[i].draw(255,0,0);
+           }
+
+           fill(255,0,0);
+          textFont("Comic Sans MS", 20);
+           text("Your Score : " + score, 20,60);
+           if(opened.length === tiles.length){
+             background(50,50,50);
+             text("You flipped all tiles in " +numtries + " tries.",100,200);
+             text("Your score is: " + score, 150,230);
+          }
+        }
+
+
+
+
+
+
+
+}};
+
+    // Get the canvas that Processing-js will use
+    var canvas = document.getElementById("mycanvas");
+    // Pass the function sketchProc (defined in myCode.js) to Processing's constructor.
+    var processingInstance = new Processing(canvas, sketchProc);
+ </script>
+
+</html>
